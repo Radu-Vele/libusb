@@ -50,6 +50,8 @@
 static int linux_netlink_socket = -1;
 static usbi_event_t netlink_control_event = USBI_INVALID_EVENT;
 static pthread_t libusb_linux_event_thread;
+/* the return value of linux_netlink_start_event_monitor() */
+int netlink_start_status = LIBUSB_ERROR_OTHER;
 
 static void *linux_netlink_event_thread_main(void *arg);
 
