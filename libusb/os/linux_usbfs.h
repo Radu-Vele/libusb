@@ -168,16 +168,23 @@ void linux_udev_hotplug_poll(void);
 int linux_netlink_start_event_monitor(void);
 int linux_netlink_stop_event_monitor(void);
 void linux_netlink_hotplug_poll(void);
+extern int netlink_start_status;
 #endif
+
 
 static inline int linux_start_event_monitor(void)
 {
 #if defined(HAVE_LIBUDEV)
 	return linux_udev_start_event_monitor();
-#elif !defined(__ANDROID__)
-	return linux_netlink_start_event_monitor();
 #else
-	return LIBUSB_SUCCESS;
+	netlink_start_status = linux_netlink_start_event_monitor();
+#if defined(__ANDROID__)
+	if (netlink_start_status != LIBUSB_SUCCESS) {
+		usbi_warn(NULL, "failed to start netlink event monitor on Android: %d. Returning success to allow libusb to initialize anyway.", netlink_start_status);
+		return LIBUSB_SUCCESS;
+	}
+#endif
+	return netlink_start_status;
 #endif
 }
 
@@ -185,8 +192,10 @@ static inline void linux_stop_event_monitor(void)
 {
 #if defined(HAVE_LIBUDEV)
 	linux_udev_stop_event_monitor();
-#elif !defined(__ANDROID__)
-	linux_netlink_stop_event_monitor();
+#else
+	if (netlink_start_status == LIBUSB_SUCCESS) {
+		linux_netlink_stop_event_monitor();
+	}
 #endif
 }
 
@@ -194,8 +203,10 @@ static inline void linux_hotplug_poll(void)
 {
 #if defined(HAVE_LIBUDEV)
 	linux_udev_hotplug_poll();
-#elif !defined(__ANDROID__)
-	linux_netlink_hotplug_poll();
+#else
+	if (netlink_start_status == LIBUSB_SUCCESS) {
+		linux_netlink_hotplug_poll();
+	}
 #endif
 }
 
